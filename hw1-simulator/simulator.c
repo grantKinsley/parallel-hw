@@ -18,14 +18,8 @@ void reset_array(int* arr, int len) {
     } 
 }
 
-// Calculate average function
-// Setup memory array (boolean array)
-// Track start point (integer, first element to fail)
-// iterate PROCS number of times ring pattern starting from start point
-// end when start point is -1
-
-double calculate_access_time(int cycle, int num_accesses) {
-    return (double)(cycle+1) / num_accesses;
+double calculate_average_access_time(int cycle, int num_accesses) {
+    return num_accesses > 0 ? (double)(cycle) / num_accesses : -1.0;
 }
 
 double average_array(double* arr, int len) {
@@ -39,16 +33,16 @@ double average_array(double* arr, int len) {
     return sum / len;
 }
 
-double evaluate_stop_condition(int cycle, double* average_accesses_by_cycle) {
+double test_stop_condition(int cycle, double* average_accesses_by_cycle) {
     if (cycle == 0) {
-        return -1.0;
+        return 0;
     }
     double cur = average_accesses_by_cycle[cycle];
     double prev = average_accesses_by_cycle[cycle-1];
     if (cur > 0 && prev > 0 && fabs(1-(prev/cur)) < VAR_EPSILON) {
         return cur;
     }
-    return -1.0;
+    return 0;
 }
 
 int allocate_memory(int* memory, int len, char dist) {
@@ -58,12 +52,8 @@ int allocate_memory(int* memory, int len, char dist) {
     } else if (dist == 'n') {
         // TODO
         return 0;
-    } else {
-        return 0;
-    }
-    // printf("MEM_INDEX %d\n" , mem_index);
+    } 
     if (memory[mem_index]) {
-
         return 0;
     }
     memory[mem_index] = 1;
@@ -83,30 +73,25 @@ double run_cycles(int num_procs, int num_mems, char dist) {
     for (int i = 0; i < MAX_CYCLES; i++) {
         int new_start_point = -1;
         int cur_point = start_point;
-        for (int i = 0; i < num_procs; i++, cur_point = cur_point < num_procs - 1 ? cur_point + 1 : 0) {
-            // printf("ALLOCATING PROCESS %d\n", cur_point);
+
+        // Allocate memory to each process
+        for (int j = 0; j < num_procs; j++) {
             int allocation_success = allocate_memory(memory, num_mems, dist);
             if (allocation_success) {
                 access_times[cur_point]++;
-                // printf("ALLOCATION SUCCESS\n");
             }
             else if(new_start_point < 0) {
                 new_start_point = cur_point;
             }
-            if (!allocation_success) {
-                // printf("ALLOCATION FAIL\n");
-            }
-            time_cumulitive_averages[cur_point] = access_times[cur_point] > 0 ? (double)(i+1) / access_times[cur_point] : -1.0;
+            time_cumulitive_averages[cur_point] = calculate_average_access_time(i+1, access_times[cur_point]);
+            cur_point = cur_point < num_procs - 1 ? cur_point + 1 : 0;
         }
-        if (new_start_point >= 0) {
-            // printf("OLD START POINT: %d. NEW START POINT: %d\n", start_point, new_start_point);
 
-            start_point = new_start_point;
-        }
-        average_accesses_by_cycle[i] = average_array(time_cumulitive_averages,num_procs);
-        double res = evaluate_stop_condition(i, average_accesses_by_cycle);
-        if (res > 0) {
-            return res;
+        start_point = new_start_point >= 0 ? new_start_point : start_point;
+        
+        average_accesses_by_cycle[i] = average_array(time_cumulitive_averages, num_procs);
+        if (test_stop_condition(i, average_accesses_by_cycle)) {
+            return average_accesses_by_cycle[i];
         }
         reset_array(memory, num_mems);
     }
@@ -121,19 +106,9 @@ void simulate(double *avg_access_time,
               int procs,
               char dist){
 
-    for (int i = 0; i < NUM_MEMS; i++) {
+    for (int i = 0; i < avg_access_time_len; i++) {
         avg_access_time[i] = run_cycles(procs, i+1, dist);
     }
-    
-    //////////////////////////////////////////////////////
-    // YOUR CODE GOES HERE.
-    // start of useless code. Just delete it.
-    // for(int i=0; i<avg_access_time_len; i++) {
-    //     avg_access_time[i] = rand_normal_wrap(75,5,100);
-    // }
-    // printf("procs: %d\ndist: %c\n", procs, dist);
-    // end of useless code
-    //////////////////////////////////////////////////////
 }
 
 
