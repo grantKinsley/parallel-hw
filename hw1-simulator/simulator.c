@@ -45,13 +45,20 @@ double test_stop_condition(int cycle, double* average_accesses_by_cycle) {
     return 0;
 }
 
-int allocate_memory(int* memory, int len, char dist) {
+void generate_normal_means(int* normal_means, int len, int num_mems) {
+    for (int i = 0; i < len; i++) {
+        normal_means[i] = rand_uniform(num_mems);
+    }
+}
+
+int allocate_memory(int* memory, int len, char dist, int* normal_means, int proc) {
     int mem_index = 0;
     if (dist == 'u') {
         mem_index = rand_uniform(len);
     } else if (dist == 'n') {
-        // TODO
-        return 0;
+        int mean = normal_means[proc];
+        int dev = 5;
+        mem_index = rand_normal_wrap(mean, dev, len);
     } 
     if (memory[mem_index]) {
         return 0;
@@ -67,6 +74,11 @@ double run_cycles(int num_procs, int num_mems, char dist) {
     double time_cumulitive_averages[num_procs];
     int start_point = 0;
 
+    int normal_means[num_procs];
+    if (dist == 'n') {
+        generate_normal_means(normal_means, num_procs, num_mems);
+    }
+
     reset_array(access_times, num_procs);
     reset_array(memory, num_mems);
 
@@ -76,7 +88,7 @@ double run_cycles(int num_procs, int num_mems, char dist) {
 
         // Allocate memory to each process
         for (int j = 0; j < num_procs; j++) {
-            int allocation_success = allocate_memory(memory, num_mems, dist);
+            int allocation_success = allocate_memory(memory, num_mems, dist, normal_means, j);
             if (allocation_success) {
                 access_times[cur_point]++;
             }
