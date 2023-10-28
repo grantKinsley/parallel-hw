@@ -59,19 +59,47 @@ void primes_sequential(carr_d_t *primes_list, unsigned int max){
     return;
 }
 
+typedef struct {
+    pthread_mutex_t *pmtx;
+    unsigned int *counter;
+    carr_d_t *primes_list;
+    unsigned int max;
+} Args;
+
+void* generatePrimes(void *args) {
+    Args *a = (Args *) args;
+    unsigned int curNum = 0;
+    while (curNum <= a->max) {
+        pthread_mutex_lock(a->pmtx);
+        curNum = *(a->counter);
+        *(a->counter) = *(a->counter) + 1;
+        pthread_mutex_unlock(a->pmtx);
+        if (curNum > a->max) {
+            pthread_exit(NULL);
+        }
+        if(isPrime(curNum)) {
+            carr_d_push(a->primes_list, curNum);
+        }
+    }
+    pthread_exit(NULL);
+}
+
 void primes_parallel(carr_d_t *primes_list, unsigned int max, \
                      unsigned int thr){
         
-    // YOUR CODE GOES HERE
-
-    //>>>>>>>> DELETE CODE FROM THIS POINT
-#ifdef DEBUG
-    printf("## DEMO CODE. DELETE BEFORE SUBMITTING!! ##\n");
-    printf("primes_parallel(carr_d_t=[pointer], max=%u, thr=%u);\n", \
-           max, thr);
-    demo_code(primes_list, max);
-    printf("## DEMO CODE. DELETE BEFORE SUBMITTING!! ##\n");
-#endif
-    //<<<<<<<< DELETE UP TO THIS POINT
-    return;
+    unsigned int counter = 1;
+    pthread_t threads[thr];
+    pthread_mutex_t pmtx;
+    Args arg_thr = { &pmtx, &counter, primes_list, max };
+    for (unsigned int i = 0; i < thr; i++) {
+        int ret = pthread_create(&threads[i], NULL, &generatePrimes, (void*) &arg_thr);
+        if(ret) {
+            printf("Error creating thread\n");
+            exit(-1);
+        }
+    }
+    for (unsigned int i = 0; i < thr; i++) {
+        pthread_join(threads[i], NULL);
+    }
+    // carr_d_print(primes_list);
 }
