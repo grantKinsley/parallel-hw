@@ -68,10 +68,9 @@ typedef struct {
 
 void* generatePrimes(void *args) {
     Args *a = (Args *) args;
-    unsigned int curNum = 0;
-    while (curNum <= a->max) {
+    while (1) {
         pthread_mutex_lock(a->pmtx);
-        curNum = *(a->counter);
+        unsigned int curNum = *(a->counter);
         *(a->counter) = *(a->counter) + 1;
         pthread_mutex_unlock(a->pmtx);
         if (curNum > a->max) {
@@ -91,6 +90,7 @@ void primes_parallel(carr_d_t *primes_list, unsigned int max, \
     pthread_t threads[thr];
     pthread_mutex_t pmtx;
     Args arg_thr = { &pmtx, &counter, primes_list, max };
+    pthread_mutex_init(&pmtx, NULL);
     for (unsigned int i = 0; i < thr; i++) {
         int ret = pthread_create(&threads[i], NULL, &generatePrimes, (void*) &arg_thr);
         if(ret) {
