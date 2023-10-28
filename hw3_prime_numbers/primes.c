@@ -35,30 +35,29 @@ void demo_code(carr_d_t *my_array, unsigned int max){
 #endif
 //<<<<<<<< DELETE UP TO THIS POINT
 
-
-
-
-
-
-void primes_sequential(carr_d_t *primes_list, unsigned int max){
-    
-    // YOUR CODE GOES HERE
-
-    //>>>>>>>> DELETE CODE FROM THIS POINT
-#ifdef DEBUG
-    printf("## DEMO CODE. DELETE BEFORE SUBMITTING!! ##\n");
-    printf("primes_sequential(carr_d_t=[pointer], max=%u);\n", max);
-    demo_code(primes_list, max);
-    printf("## DEMO CODE. DELETE BEFORE SUBMITTING!! ##\n");
-#endif
-    //<<<<<<<< DELETE UP TO THIS POINT
-    return;
+// Return 1 if num is prime
+// Else return 0
+int isPrime(unsigned int num) {
+    if (num <= 1) {
+        return 0;
+    }
+    for (unsigned int i = 2; i <= num/2; i++) {
+        if (num % i == 0) {
+            return 0;
+        }
+    }
+    return 1;
 }
 
-
-
-
-
+void primes_sequential(carr_d_t *primes_list, unsigned int max){
+    for (unsigned int i = 1; i <= max; i++) {
+        if(isPrime(i)) {
+            carr_d_push(primes_list, i);
+        }
+    }
+    // carr_d_print(primes_list);
+    return;
+}
 
 void primes_parallel(carr_d_t *primes_list, unsigned int max, \
                      unsigned int thr){
