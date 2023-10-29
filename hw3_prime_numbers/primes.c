@@ -6,6 +6,7 @@
 #include "primes.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 typedef struct {
     pthread_mutex_t *pmtx;
@@ -18,7 +19,7 @@ int isPrime(unsigned int num) {
     if (num <= 1) 
         return 0;
 
-    for (unsigned int i = 2; i <= num/2; i++) {
+    for (unsigned int i = 2; i <= sqrt(num); i++) {
         if (num % i == 0) 
             return 0;
     }
