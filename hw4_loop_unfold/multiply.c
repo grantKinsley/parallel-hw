@@ -29,7 +29,7 @@ typedef struct {
     Mat *A, *B, *C;
 } Args;
 
-int dot_product(unsigned int size, unsigned int row, unsigned int col, Mat *A, Mat *B) {
+static int dot_product(unsigned int size, unsigned int row, unsigned int col, Mat *A, Mat *B) {
     unsigned int entry_res = 0;
     for (int position = 0; position < size; position++) {
         entry_res += (A->ptr[row*size + position]) * (B->ptr[size*position + col]);
@@ -37,7 +37,7 @@ int dot_product(unsigned int size, unsigned int row, unsigned int col, Mat *A, M
     return entry_res;
 }
 
-void* generateMatrixC(void *args) {
+static void* generateMatrixC(void *args) {
     Args *a = (Args *) args;
     while(1) {
         // get the entry of C to work on
@@ -63,19 +63,28 @@ void mat_multiply(Mat *A, Mat *B, Mat *C, unsigned int threads){
     // Remember to set the correct values for C->m, and C->n after doing the
     // multiplication (this matters if the matrices are not square)
 
-    // hw spec says we assume square matrices
+    // hw spec says we assume square matrices, so all Mat will have the same dim
     unsigned int size = A->m;
+    C->m = size;
+    C->n = size;
 
-    unsigned int entryCounter = 0;  // protected counter so each thread knows which entry of C to edit
+    // protected counter so each thread knows which entry of C to edit
+    unsigned int entryCounter = 0;
     pthread_t thread_arr[threads];
     pthread_mutex_t pmtx;
     pthread_mutex_init(&pmtx, NULL);
 
-    int total_entries = size * size;
-    MatEntry entry_data_list[total_entries];
-
     // each spot of entry_data_list corresponded to an entry of C
     // each spot holds what row of A and col of B corresponds to its entry
+    // dynamically allocate the list when size of Mat gets very large
+    int total_entries = size * size;
+    MatEntry *entry_data_list;
+    entry_data_list = malloc(total_entries * sizeof(MatEntry));
+    if (entry_data_list == NULL) {
+        printf("Error allocating memory\n");
+        exit(-1);
+    }
+
     int thread_num = 0;
     for (unsigned int row = 0; row < size; row++) {
         for (unsigned int col = 0; col < size; col++) {
@@ -86,7 +95,7 @@ void mat_multiply(Mat *A, Mat *B, Mat *C, unsigned int threads){
     }
 
     Args arg_thr = { &pmtx, &entryCounter, size, entry_data_list, A, B, C };
- 
+
     for (unsigned int i = 0; i < threads; i++) {
         int ret = pthread_create(&thread_arr[i], NULL, &generateMatrixC, (void*) &arg_thr);
         if (ret) {
@@ -95,11 +104,10 @@ void mat_multiply(Mat *A, Mat *B, Mat *C, unsigned int threads){
         }
     }
 
-    C->m = size;
-    C->n = size;
-
     for (unsigned int i = 0; i < threads; i++) {
         pthread_join(thread_arr[i], NULL);
     }
+
+    free(entry_data_list);
     return;
 }
