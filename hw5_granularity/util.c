@@ -117,7 +117,7 @@ void print_arguments(ProgramArgs *a){
 }
 
 
-void create_filename(char *fname, const ProgramArgs *a, long int /*id*/){
+void create_filename(char *fname, const ProgramArgs *a, long int id){
     char *conc;
     switch(a->conc){
     case CONC_SEQUENTIAL: conc= "s"; break;

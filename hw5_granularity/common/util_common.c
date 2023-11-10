@@ -11,7 +11,7 @@ double stopwatch(void){
 }
 
 
-void seed_rng(long int /*seed*/){
+void seed_rng(long int seed){
     // not implemented yet
 }
 

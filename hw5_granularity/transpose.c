@@ -18,10 +18,10 @@
 
 typedef struct {
     pthread_mutex_t *pmtx;
-    unsigned int *row;
-    unsigned int *col;
     unsigned int grain;
     Mat *mat;
+    unsigned int *rowCounter;
+    unsigned int *colCounter;
 } Args;
 
 void mat_squaretransp_sequential(Mat *mat){
@@ -43,46 +43,87 @@ static void swap_entries(Mat *mat, unsigned int row, unsigned int col) {
     mat->ptr[col*size+row] = temp;
 }
 
+// static void* transpose_mat(void *args) {
+//     // printf("swap entries\n");
+//     Args *a = (Args *) args;
+//     unsigned int size = a->mat->m;
+    
+//     while(1) {
+//         // get the entry of mat to work on
+//         pthread_mutex_lock(a->pmtx);
+//         unsigned int curCounter = *(a->counter);
+//         *(a->counter) = *(a->counter) + a->grain;
+//         pthread_mutex_unlock(a->pmtx);
+
+//         if (curCounter >= (size*(size-1))/2) {
+//             pthread_exit(NULL);
+//         }
+
+//         for (unsigned int k = 0; k < a->grain; k++) {
+//             unsigned int curEntry = a->entriesToSwap->arr[curCounter];
+//             unsigned int row = curEntry / size;
+//             unsigned int col = curEntry % size;
+//             swap_entries(a->mat, row, col);
+            
+//             curCounter++;
+//             if (curCounter >= (size*(size-1))/2) {
+//                 break;
+//             }
+//         }
+//     }
+//     printf("end thread\n");
+//     pthread_exit(NULL);
+// }
+
 static void* transpose_mat(void *args) {
-    // printf("swap entries\n");
     Args *a = (Args *) args;
     unsigned int size = a->mat->m;
     
     while(1) {
-        // get the entry of mat to work on
         pthread_mutex_lock(a->pmtx);
-        unsigned int row = *(a->row);
-        unsigned int col = *(a->col);
-        if (col + a->grain >= size) {
-            // loop around to next row
-            *(a->row) = *(a->row) + 1;
-            *(a->col) = 1 + ((col + a->grain) % size) + *(a->row);
+
+        // get current row and col for this thread to work on
+        unsigned int curCol = *(a->colCounter);
+        unsigned int curRow = *(a->rowCounter);
+        
+        // set row and col counters for next thread to work on
+        *(a->colCounter) += a->grain;
+        while (*(a->colCounter) >= size) {
+            
+            ++*(a->rowCounter);
+            if (*(a->rowCounter) >= size-1) {
+                break;
+            }
+            unsigned int remainder = (*(a->colCounter)+1) - size;
+            *(a->colCounter) = *(a->rowCounter) + remainder;
+            // printf("counter: %d %d\n", *(a->rowCounter), *(a->colCounter));
         }
-        else {
-            // stay in same row
-            *(a->col) = ((col + a->grain));
-        }
+        // printf("current: %d %d\n", curRow, curCol);
+        // printf("counter: %d %d\n", *(a->rowCounter), *(a->colCounter));
+
         pthread_mutex_unlock(a->pmtx);
 
-        if (row >= size-1) {
-            // done transposing once we get to last row
+        // if at last row, done with transposition
+        if (curRow >= size-1) {
             pthread_exit(NULL);
         }
 
+        // do grain number of swaps
         for (unsigned int k = 0; k < a->grain; k++) {
-            swap_entries(a->mat, row, col);
-            // printf("swap %d %d\n", row, col);
-            col++;
-            if (col >= size) {
-                row = row + 1;
-                col = row + 1;
+            // printf("swap %d %d\n", curRow, curCol);
+            swap_entries(a->mat, curRow, curCol);
+            ++curCol;
+            if (curCol >= size) {
+                ++curRow;
+                curCol = curRow;
+                ++curCol;
             }
-            if (row >= size-1) {
+            if (curRow >= size-1) {
                 break;
             }
         }
+        // printf("\n");
     }
-    printf("end thread\n");
     pthread_exit(NULL);
 }
 
@@ -92,10 +133,22 @@ void mat_squaretransp_parallel(Mat *mat, unsigned int grain, unsigned int thr){
 
     pthread_mutex_t pmtx;
     pthread_mutex_init(&pmtx, NULL);
-    unsigned int row = 0;
-    unsigned int col = 1;
+    unsigned int rowCounter = 0;
+    unsigned int colCounter = 1;
 
-    Args arg_thr = { &pmtx, &row, &col, grain, mat };
+    // unsigned int counter = 0;
+    // carr_d_t entriesToSwap; // holds the entries of upper triangle of mat
+    // carr_d_init(&entriesToSwap, (size*(size-1))/2);
+
+    // for (unsigned int i = 0; i < size; i++) {
+    //     for (unsigned int j = i+1; j < size; j++) {
+    //         carr_d_push(&entriesToSwap, i*size+j);
+    //     }
+    // }
+
+    Args arg_thr = { &pmtx, grain, mat, &rowCounter, &colCounter};
+
+    // Args arg_thr = { &pmtx, grain, &counter, &entriesToSwap, mat };
 
     for (unsigned int i = 0; i < thr; i++) {
         int ret = pthread_create(&threads[i], NULL, &transpose_mat, (void*) &arg_thr);
