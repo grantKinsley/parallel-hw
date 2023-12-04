@@ -94,6 +94,7 @@ void load_balance_sim(unsigned int numProcessors) {
 
     printf("End loads:\n");
     print_loads(procLoads, numProcessors);
+    printf("Total number of cycles to reach steady balanced state: %d\n", lastChange);
 }
 
 int main() {
