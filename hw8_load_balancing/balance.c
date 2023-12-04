@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdint.h>
 
 const unsigned int MIN_INTERVAL = 100;
 const unsigned int MAX_INTERVAL = 1000;
